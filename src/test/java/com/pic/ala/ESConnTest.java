@@ -1,7 +1,6 @@
 package com.pic.ala;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -11,7 +10,7 @@ import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
-import org.elasticsearch.shield.ShieldPlugin;
+import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
 // ES 1.7.4
 //import org.elasticsearch.common.settings.ImmutableSettings;
@@ -24,40 +23,26 @@ public class ESConnTest {
 
 	public static void main(String[] args) {
 
-		String esNodesString = "hdpr01wn01,hdpr01wn02,hdpr01wn03,hdpr01wn04,hdpr01wn05";
+		String esNodesString = "hdp01,hdp02,hdp03,hdp04,hdp05";
 		List<String> esNodesList = Arrays.asList(esNodesString.split("\\s*,\\s*"));
 
-//		List<InetSocketTransportAddress> esNodes = new ArrayList<InetSocketTransportAddress>();
+		final Settings settings = Settings.builder()
+				.put("cluster.name", "elasticsearch")
+				.put("client.transport.sniff", true)
+				.build();
 
-		// ES 1.7
-//		Settings settings = ImmutableSettings.settingsBuilder().put("cluster.name", "elasticsearch").build();
-//		TransportClient transportClient = new TransportClient(settings);
-
-		// ES 2.2
-//		final Settings settings = Settings.settingsBuilder().put("cluster.name", "elasticsearch").build();
-//		TransportClient transportClient = TransportClient.builder().build();
-		if (ES_SHIELD_ENABLED) {
-			final Settings settings = Settings.settingsBuilder().put("cluster.name", "elasticsearch")
-					.put("client.transport.sniff", true).put("shield.user", "transport_client_user:aploganalyzerpass").build();
-			transportClient = TransportClient.builder().addPlugin(ShieldPlugin.class)
-					.settings(settings).build();
-		} else {
-			final Settings settings = Settings.settingsBuilder().put("cluster.name", "elasticsearch")
-					.put("client.transport.sniff", true).build();
-			transportClient = TransportClient.builder().settings(settings).build();
-		}
+		PreBuiltTransportClient preBuiltTransportClient = new PreBuiltTransportClient(settings);
 
 		for (String esNode : esNodesList) {
-			// ES 1.7
-//			transportClient.addTransportAddress(new InetSocketTransportAddress(esNode, 9300));
 			try {
-//				 ES 2.2
-				transportClient
-						.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(esNode), 9300));
-			} catch (UnknownHostException e) {
+
+				preBuiltTransportClient.addTransportAddress(
+						new InetSocketTransportAddress(InetAddress.getByName(esNode), 9300));
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
+		TransportClient transportClient = preBuiltTransportClient;
 
 		for (DiscoveryNode dNode: transportClient.connectedNodes()) {
 			System.out.println(dNode.toString());
@@ -72,7 +57,7 @@ public class ESConnTest {
 				.prepareIndex(indexName, indexType)
 				.setSource(toBeIndexed).get();
 
-		if (response.isCreated()) {
+		if (!response.getId().isEmpty()) {
 			String documentIndexId = response.getId();
 			// Anchored
 			System.out.println("OK. The documentIndexId: " + documentIndexId);

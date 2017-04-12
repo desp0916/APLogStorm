@@ -6,8 +6,9 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.elasticsearch.index.mapper.object.ObjectMapper;
+
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Event {
 

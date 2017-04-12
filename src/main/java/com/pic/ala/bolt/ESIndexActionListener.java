@@ -12,13 +12,12 @@
  */
 package com.pic.ala.bolt;
 
-import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.index.IndexResponse;
-import org.slf4j.Logger;
-
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.index.IndexResponse;
+import org.slf4j.Logger;
 
 public class ESIndexActionListener implements ActionListener<IndexResponse> {
 
@@ -35,7 +34,7 @@ public class ESIndexActionListener implements ActionListener<IndexResponse> {
 
 	@Override
 	public void onResponse(IndexResponse response) {
-		if (response.isCreated()) {
+		if (!response.getId().isEmpty()) {
 			collector.ack(tuple);
 			String index = response.getIndex();
 			String type = response.getType();
@@ -53,7 +52,7 @@ public class ESIndexActionListener implements ActionListener<IndexResponse> {
 	}
 
 	@Override
-	public void onFailure(Throwable e) {
+	public void onFailure(Exception e) {
 		collector.reportError(e);
 		collector.fail(tuple);
 		logger.error("Index failure on tuple asynchronously: {} ", tuple.toString());

@@ -2,7 +2,7 @@ package com.pic.ala.model;
 
 import static com.pic.ala.util.LogUtil.getISO8601Time;
 
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = false)
 public class LogEntry {

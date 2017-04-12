@@ -1,7 +1,6 @@
 package com.pic.ala;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -15,31 +14,37 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.filter.Filter;
 import org.elasticsearch.search.aggregations.bucket.filter.FilterAggregationBuilder;
-import org.elasticsearch.search.aggregations.metrics.MetricsAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.max.Max;
+import org.elasticsearch.search.aggregations.metrics.min.MinAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.sum.Sum;
+import org.elasticsearch.search.aggregations.metrics.sum.SumAggregationBuilder;
+import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
 public class ESearchTest {
 
 	private static TransportClient transportClient;
-	
+
 	public static Client getClient() {
-		String esNodesString = "hdpr01wn01,hdpr01wn02,hdpr01wn03,hdpr01wn04,hdpr01wn05";
+		String esNodesString = "hdp01,hdp02,hdp03,hdp04,hdp05";
 		List<String> esNodesList = Arrays.asList(esNodesString.split("\\s*,\\s*"));
 
-		final Settings settings = Settings.settingsBuilder().put("cluster.name", "elasticsearch")
-				.put("client.transport.sniff", true).build();
-		transportClient = TransportClient.builder().settings(settings).build();
+		final Settings settings = Settings.builder()
+				.put("cluster.name", "elasticsearch")
+				.put("client.transport.sniff", true)
+				.build();
+
+		PreBuiltTransportClient preBuiltTransportClient = new PreBuiltTransportClient(settings);
 
 		for (String esNode : esNodesList) {
 			try {
-				// ES 2.2
-				transportClient
-						.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(esNode), 9300));
-			} catch (UnknownHostException e) {
+
+				preBuiltTransportClient.addTransportAddress(
+						new InetSocketTransportAddress(InetAddress.getByName(esNode), 9300));
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
+		TransportClient transportClient = preBuiltTransportClient;
 
 //		for (DiscoveryNode dNode : transportClient.connectedNodes()) {
 //			System.out.println(dNode.toString());
@@ -49,7 +54,7 @@ public class ESearchTest {
 	}
 
 	// https://www.elastic.co/guide/en/elasticsearch/client/java-api/2.3/_structuring_aggregations.html
-	public static void testAggregation1() {	
+	public static void testAggregation1() {
 		Client client = getClient();
 		SearchResponse sr = client.prepareSearch("aplog_aes3g-2016.12")
 				.addAggregation(
@@ -72,7 +77,10 @@ public class ESearchTest {
 	// https://www.elastic.co/guide/en/elasticsearch/client/java-api/2.3/_metrics_aggregations.html#java-aggs-metrics-max
 	public static void testMaxAggregation() {
 		Client client = getClient();
-		MetricsAggregationBuilder<?> aggregation = AggregationBuilders.max("agg").field("dataCnt");
+		MinAggregationBuilder aggregation =
+		        AggregationBuilders
+		                .min("agg")
+		                .field("height");
 		SearchResponse sr = client.prepareSearch("aplog_aes3g-2016.12.15")
 				.addAggregation(aggregation).execute().actionGet();
 		Max agg = sr.getAggregations().get("agg");
@@ -82,7 +90,7 @@ public class ESearchTest {
 
 	public static void testSumAggregation() {
 		Client client = getClient();
-		MetricsAggregationBuilder<?> aggregation = AggregationBuilders.sum("agg").field("dataCnt");
+		SumAggregationBuilder aggregation = AggregationBuilders.sum("agg").field("dataCnt");
 		SearchResponse sr = client.prepareSearch("aplog_aes3g-2016.12.15")
 				.addAggregation(aggregation).execute().actionGet();
 		Sum agg = sr.getAggregations().get("agg");
@@ -93,7 +101,7 @@ public class ESearchTest {
 	// Filter then count
 	public static void testFilterAggregation() {
 		Client client = getClient();
-		FilterAggregationBuilder aggregation = AggregationBuilders.filter("agg").filter(QueryBuilders.termQuery("logType", "batch"));
+		FilterAggregationBuilder aggregation = AggregationBuilders.filter("agg", QueryBuilders.termQuery("logType", "batch"));
 		SearchResponse sr = client.prepareSearch("aplog_aes3g-2016.12.15")
 				.addAggregation(aggregation).execute().actionGet();
 		Filter agg = sr.getAggregations().get("agg");

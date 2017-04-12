@@ -14,8 +14,8 @@ import org.apache.storm.topology.base.BaseRichSpout;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
 import org.apache.storm.utils.Utils;
-import org.elasticsearch.index.mapper.object.ObjectMapper;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pic.ala.model.ApLog;
 
 public class RandomLogSpout extends BaseRichSpout {

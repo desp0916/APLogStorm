@@ -22,9 +22,17 @@ import static com.pic.ala.util.LogUtil.isNullOrEmpty;
 
 import java.net.InetAddress;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.task.TopologyContext;
+import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.apache.storm.topology.base.BaseRichBolt;
+import org.apache.storm.tuple.Fields;
+import org.apache.storm.tuple.Tuple;
+import org.apache.storm.tuple.Values;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.index.IndexResponse;
@@ -34,19 +42,11 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.indices.IndexClosedException;
 import org.elasticsearch.node.NodeClosedException;
-import org.elasticsearch.shield.ShieldPlugin;
+import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.pic.ala.scheme.ApLogScheme;
-
-import org.apache.storm.task.OutputCollector;
-import org.apache.storm.task.TopologyContext;
-import org.apache.storm.topology.OutputFieldsDeclarer;
-import org.apache.storm.topology.base.BaseRichBolt;
-import org.apache.storm.tuple.Fields;
-import org.apache.storm.tuple.Tuple;
-import org.apache.storm.tuple.Values;
 
 public class ESIndexerBolt extends BaseRichBolt {
 
@@ -89,7 +89,7 @@ public class ESIndexerBolt extends BaseRichBolt {
 					"ElasticSearch configuration not found using key '" + this.configKey + "'");
 		}
 
-		Map<String, Object> conf = (Map<String, Object>) stormConf.get(this.configKey);
+		Map<String, Object> conf = (HashMap<String, Object>) stormConf.get(this.configKey);
 
 		esAsyncEnabled = Boolean.parseBoolean((String)conf.get(ES_ASYNC_ENABLED));
 		String esClusterName = (String)conf.get(ES_CLUSTER_NAME);
@@ -120,47 +120,27 @@ public class ESIndexerBolt extends BaseRichBolt {
 
 		this.collector = collector;
 
-		// ElasticSearch 1.7
-//		final Settings settings = ImmutableSettings.settingsBuilder().put("cluster.name", esClusterName).build();
-//		TransportClient transportClient = new TransportClient(settings);
+		final Settings settings = Settings.builder()
+				.put("cluster.name", esClusterName)
+				.put("client.transport.sniff", true)
+				.build();
 
-		// ElasticSearch 2.3
-		if (esShieldEnabled) {
-			final Settings settings = Settings.settingsBuilder()
-					.put("cluster.name", esClusterName)
-					.put("client.transport.sniff", true)
-					.put("shield.user", esShieldUser + ":" + esShieldPass)
-					.build();
-			transportClient = TransportClient.builder().addPlugin(ShieldPlugin.class)
-					.settings(settings).build();
-		} else {
-			final Settings settings = Settings.settingsBuilder()
-					.put("cluster.name", esClusterName)
-					.put("client.transport.sniff", true)
-					.build();
-			transportClient = TransportClient.builder().settings(settings).build();
-		}
+		PreBuiltTransportClient preBuiltTransportClient = new PreBuiltTransportClient(settings);
 
 		synchronized (ESIndexerBolt.class) {
 			if (client == null) {
 				List<String> esNodesList = Arrays.asList(esNodes.split("\\s*,\\s*"));
 				for (String esNode : esNodesList) {
 					try {
-						// ElasticSearch 1.7
-//						transportClient.addTransportAddress(new InetSocketTransportAddress(esNode, 9300));
-						// ElasticSearch 2.2
-						transportClient.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(esNode), 9300));
+
+						preBuiltTransportClient.addTransportAddress(
+								new InetSocketTransportAddress(InetAddress.getByName(esNode), 9300));
 					} catch (Exception e) {
 						LOG.warn("Unable to add ElasticSearch node: " + esNode);
 					}
 				}
+				TransportClient transportClient = preBuiltTransportClient;
 				client = transportClient;
-//				if (transportClient.connectedNodes().size() >= MIN_CONNECTED_NODES) {
-//					client = transportClient;
-//				} else {
-//					transportClient.close();
-//					throw new RuntimeException("Unable to initialize ElasticSearch client.");
-//				}
 			}
 		}
 	}
@@ -182,7 +162,7 @@ public class ESIndexerBolt extends BaseRichBolt {
 		if (!isDateValid(logDate, ApLogScheme.FORMAT_DATE)) {
 			LOG.error("The format of logDate is null or invalid: {}", logDate);
 			collector.ack(tuple);
-			return;			
+			return;
 		}
 
 		if (isNullOrEmpty(sysID) || isNullOrEmpty(logType) || isNullOrEmpty(logDate)
@@ -216,10 +196,10 @@ public class ESIndexerBolt extends BaseRichBolt {
 						.setSource(toBeIndexed).get();
 				if (response == null) {
 					collector.reportError(new Throwable("ES null response"));
-					collector.fail(tuple);										
+					collector.fail(tuple);
 					LOG.error("Failed to index tuple due to ES null reponse: {} ", tuple.toString());
 				} else {
-					if (response.isCreated()) {
+					if (!response.getId().isEmpty()) {
 						collector.ack(tuple);
 						String documentId = response.getId();
 						String logMsg = "Indexed successfully [" + sysID + "/"+ logType + "/" + documentId + "]";

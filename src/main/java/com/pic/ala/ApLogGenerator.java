@@ -24,7 +24,6 @@ package com.pic.ala;
 import java.util.Properties;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
-
 import org.apache.storm.Config;
 import org.apache.storm.StormSubmitter;
 import org.apache.storm.generated.AlreadyAliveException;
@@ -38,7 +37,7 @@ import org.apache.storm.topology.TopologyBuilder;
 import com.pic.ala.spout.RandomLogSpout;
 
 public class ApLogGenerator extends LogBaseTopology {
-	
+
 	private static boolean DEBUG = false;
 
 	private static String brokerUrl;
@@ -52,6 +51,7 @@ public class ApLogGenerator extends LogBaseTopology {
 		builder.setSpout(SPOUT_ID, new RandomLogSpout(), 3).setDebug(DEBUG);
 	}
 
+	@SuppressWarnings({ "unchecked", "serial" })
 	private void configureKafkaBolt(TopologyBuilder builder, Config config) {
 		String topic = topologyConfig.getProperty("kafka.topic");
 		Properties props = new Properties();
@@ -61,7 +61,6 @@ public class ApLogGenerator extends LogBaseTopology {
 		props.put("serializer.class", "kafka.serializer.StringEncoder");
 		props.put("request.required.acks", "1");
 		config.setMaxSpoutPending(20);
-		config.put(KafkaBolt.KAFKA_BROKER_PROPERTIES, props);
 		KafkaBolt<String, String> kafkaBolt = new KafkaBolt<String, String>().withTopicSelector(new DefaultTopicSelector(topic))
 										.withTupleToKafkaMapper(new FieldNameBasedTupleToKafkaMapper<String, String>("key", "log"));
 		builder.setBolt("KafkaBolt", kafkaBolt, 3).shuffleGrouping(SPOUT_ID).setDebug(DEBUG);
@@ -83,7 +82,7 @@ public class ApLogGenerator extends LogBaseTopology {
 	public static void main(String[] args) throws Exception {
 		final String configFileLocation = "ApLogAnalyzer.properties";
 		ApLogGenerator topology = new ApLogGenerator(configFileLocation);
-		
+
 		if (args.length == 0) {
 			brokerUrl = topologyConfig.getProperty("metadata.broker.list");
 		} else if (args.length == 1) {

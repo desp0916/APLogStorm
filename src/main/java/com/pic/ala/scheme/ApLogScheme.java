@@ -14,10 +14,10 @@ import java.util.List;
 import org.apache.storm.spout.Scheme;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
-import org.elasticsearch.index.mapper.object.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pic.ala.model.ApLog;
 
 public class ApLogScheme implements Scheme {

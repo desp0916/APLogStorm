@@ -31,18 +31,17 @@ import org.apache.storm.StormSubmitter;
 import org.apache.storm.generated.AlreadyAliveException;
 import org.apache.storm.generated.AuthorizationException;
 import org.apache.storm.generated.InvalidTopologyException;
-import org.apache.storm.kafka.BrokerHosts;
-import org.apache.storm.kafka.SpoutConfig;
-import org.apache.storm.kafka.ZkHosts;
 import org.apache.storm.kafka.spout.KafkaSpout;
-import org.apache.storm.spout.SchemeAsMultiScheme;
+import org.apache.storm.kafka.spout.KafkaSpoutConfig;
+import org.apache.storm.kafka.spout.KafkaSpoutRetryExponentialBackoff;
+import org.apache.storm.kafka.spout.KafkaSpoutRetryExponentialBackoff.TimeInterval;
 import org.apache.storm.topology.TopologyBuilder;
 
 import com.pic.ala.bolt.ESIndexerBolt;
 import com.pic.ala.scheme.ApLogScheme;
 
 public class ApLogAnalyzer extends LogBaseTopology {
-	
+
 	private static boolean DEBUG = false;
 
 //	private static final Logger LOG = Logger.getLogger(ApLogAnalyzer.class);
@@ -56,25 +55,36 @@ public class ApLogAnalyzer extends LogBaseTopology {
 
 	public ApLogAnalyzer(String configFileLocation) throws Exception {
 		super(configFileLocation);
-		apLogScheme = new ApLogScheme();
+		this.apLogScheme = new ApLogScheme();
 	}
 
-	private SpoutConfig constructKafkaSpoutConf() {
-		final BrokerHosts hosts = new ZkHosts(topologyConfig.getProperty("kafka.zookeeper.host.port"));
+	private KafkaSpoutConfig<String, String> constructKafkaSpoutConf() {
+//		final BrokerHosts hosts = new ZkHosts(topologyConfig.getProperty("kafka.zookeeper.host.port"));
+		final String bootstrapServers = topologyConfig.getProperty("metadata.broker.list");
 		final String topic = topologyConfig.getProperty("kafka.topic");
-		final String zkRoot = topologyConfig.getProperty("kafka.zkRoot");
+//		final String zkRoot = topologyConfig.getProperty("kafka.zkRoot");
 //		String consumerGroupId = UUID.randomUUID().toString();
-		final SpoutConfig spoutConfig = new SpoutConfig(hosts, topic, zkRoot, CONSUMER_GROUP_ID);
-		spoutConfig.startOffsetTime = System.currentTimeMillis();
-		spoutConfig.scheme = new SchemeAsMultiScheme(apLogScheme);
-		spoutConfig.retryInitialDelayMs = 10000;	// 10 seconds
-		spoutConfig.retryDelayMultiplier = 1.1;		// 10, 11, 12.1, 13.31, 14.641... 
-		spoutConfig.retryDelayMaxMs = 590000;		// about 10 minutes
+//		final SpoutConfig spoutConfig = new SpoutConfig(hosts, topic, zkRoot, CONSUMER_GROUP_ID);
+//		spoutConfig.startOffsetTime = System.currentTimeMillis();
+//		spoutConfig.scheme = new SchemeAsMultiScheme(apLogScheme);
+//		spoutConfig.retryInitialDelayMs = 10000;	// 10 seconds
+//		spoutConfig.retryDelayMultiplier = 1.1;		// 10, 11, 12.1, 13.31, 14.641...
+//		spoutConfig.retryDelayMaxMs = 590000;		// about 10 minutes
+
+		final KafkaSpoutConfig<String, String> spoutConfig = KafkaSpoutConfig.builder(bootstrapServers, topic)
+			.setGroupId(CONSUMER_GROUP_ID)
+			.setMaxPollRecords(5)
+			.setRetry(new KafkaSpoutRetryExponentialBackoff(TimeInterval.seconds(10), TimeInterval.milliSeconds(2000),
+					KafkaSpoutConfig.DEFAULT_MAX_RETRIES, TimeInterval.seconds(10000)))
+			.setMaxUncommittedOffsets(250)
+			.setPollTimeoutMs(1000)
+			.build();
+
 		return spoutConfig;
 	}
 
 	private void configureKafkaSpout(TopologyBuilder builder, Config config) {
-		KafkaSpout kafkaSpout = new KafkaSpout(constructKafkaSpoutConf());
+		KafkaSpout<String, String> kafkaSpout = new KafkaSpout<String, String>(constructKafkaSpoutConf());
 		final int spoutThreads = Integer.valueOf(topologyConfig.getProperty("spout.KafkaSpout.threads"));
 
 		builder.setSpout(KAFKA_SPOUT_ID, kafkaSpout, spoutThreads).setDebug(DEBUG);
