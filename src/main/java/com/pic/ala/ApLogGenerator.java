@@ -23,9 +23,8 @@ package com.pic.ala;
 
 import java.util.Properties;
 
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.storm.Config;
-import org.apache.storm.StormSubmitter;
+import org.apache.storm.LocalCluster;
 import org.apache.storm.generated.AlreadyAliveException;
 import org.apache.storm.generated.AuthorizationException;
 import org.apache.storm.generated.InvalidTopologyException;
@@ -51,18 +50,26 @@ public class ApLogGenerator extends LogBaseTopology {
 		builder.setSpout(SPOUT_ID, new RandomLogSpout(), 3).setDebug(DEBUG);
 	}
 
-	@SuppressWarnings({ "unchecked", "serial" })
 	private void configureKafkaBolt(TopologyBuilder builder, Config config) {
 		String topic = topologyConfig.getProperty("kafka.topic");
+//		Properties props = new Properties();
+//		props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerUrl);
+//		props.put(ProducerConfig.CLIENT_ID_CONFIG, "storm-kafka-producer");
+//		props.put("metadata.broker.list", brokerUrl);
+//		props.put("serializer.class", "kafka.serializer.StringEncoder");
+//		props.put("request.required.acks", "1");
+
 		Properties props = new Properties();
-		props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerUrl);
-		props.put(ProducerConfig.CLIENT_ID_CONFIG, "storm-kafka-producer");
-		props.put("metadata.broker.list", brokerUrl);
-		props.put("serializer.class", "kafka.serializer.StringEncoder");
-		props.put("request.required.acks", "1");
-		config.setMaxSpoutPending(20);
-		KafkaBolt<String, String> kafkaBolt = new KafkaBolt<String, String>().withTopicSelector(new DefaultTopicSelector(topic))
-										.withTupleToKafkaMapper(new FieldNameBasedTupleToKafkaMapper<String, String>("key", "log"));
+        props.put("bootstrap.servers", brokerUrl);
+        props.put("acks", "1");
+        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+
+		KafkaBolt<String, String> kafkaBolt = new KafkaBolt<String, String>()
+                .withProducerProperties(props)
+				.withTopicSelector(new DefaultTopicSelector(topic))
+				.withTupleToKafkaMapper(new FieldNameBasedTupleToKafkaMapper<String, String>("key", "log"));
+
 		builder.setBolt("KafkaBolt", kafkaBolt, 3).shuffleGrouping(SPOUT_ID).setDebug(DEBUG);
 	}
 
@@ -70,13 +77,14 @@ public class ApLogGenerator extends LogBaseTopology {
 		Config config = new Config();
 		config.setDebug(DEBUG);
 		config.setNumWorkers(1);
+		config.setMaxSpoutPending(20);
 
 		TopologyBuilder builder = new TopologyBuilder();
 		configureRandomLogSpout(builder, config);
 		configureKafkaBolt(builder, config);
 
-//		LocalCluster cluster = new LocalCluster();
-		StormSubmitter.submitTopology("ApLogGeneratorV1", config, builder.createTopology());
+		LocalCluster cluster = new LocalCluster();
+		cluster.submitTopology("ApLogGeneratorV1", config, builder.createTopology());
 	}
 
 	public static void main(String[] args) throws Exception {
