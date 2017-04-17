@@ -27,7 +27,7 @@ package com.pic.ala;
 import java.util.HashMap;
 
 import org.apache.storm.Config;
-import org.apache.storm.StormSubmitter;
+import org.apache.storm.LocalCluster;
 import org.apache.storm.generated.AlreadyAliveException;
 import org.apache.storm.generated.AuthorizationException;
 import org.apache.storm.generated.InvalidTopologyException;
@@ -48,8 +48,6 @@ public class ApLogAnalyzer extends LogBaseTopology {
 
 	private static final String KAFKA_SPOUT_ID = "kafkaSpout";
 	private static final String ESINDEXER_BOLT_ID = "ESIndexerBolt";
-//	private static final String HBASE_DETAIL_BOLT_ID = "hbaseDetailBolt";
-//	private static final String HBASE_AGG_BOLT_ID = "hbaseAggBolt";
 	private static final String CONSUMER_GROUP_ID = "aplog-analyzer";
 	private ApLogScheme apLogScheme;
 
@@ -105,34 +103,6 @@ public class ApLogAnalyzer extends LogBaseTopology {
 		builder.setBolt(ESINDEXER_BOLT_ID, esBolt, boltThreads).shuffleGrouping(KAFKA_SPOUT_ID).setDebug(DEBUG);
 	}
 
-//	private void configureHBaseBolts(TopologyBuilder builder, Config config) {
-//		Map<String, Object> hbaseConfig = new HashMap<String, Object>();
-//		hbaseConfig.put("hbase.rootdir", "hdfs://hdpha/apps/hbase/data");
-//		config.put("hbase.conf", hbaseConfig);
-//
-//		// the bolt to write raw AP logs
-//		SimpleHBaseMapper rawMapper = new SimpleHBaseMapper()
-//				.withRowKeyField(ApLogScheme.FIELD_ROWKEY)
-//				.withColumnFields(new Fields(
-//						ApLogScheme.FIELD_HOSTIP,
-//						ApLogScheme.FIELD_LOG_TIME,
-//						ApLogScheme.FIELD_LOG_LEVEL,
-//						ApLogScheme.FIELD_CLASS_METHOD,
-//						ApLogScheme.FIELD_KEYWORD1,
-//						ApLogScheme.FIELD_KEYWORD2,
-//						ApLogScheme.FIELD_KEYWORD3,
-//						ApLogScheme.FIELD_MESSAGE))
-////				.withCounterFields(new Fields("count"))
-//				.withColumnFamily("cf");
-//		HBaseBolt hbase = new HBaseBolt(APLogScheme.SYSTEM_ID, rawMapper).withConfigKey("hbase.conf");
-//		builder.setBolt(HBASE_DETAIL_BOLT_ID, hbase, 1).fieldsGrouping(KAFKA_SPOUT_ID, new Fields(APLogScheme.FIELD_LOG_ID));
-//
-//		// the bolt to write aggregations
-//		SimpleHBaseMapper aggMapper = new SimpleHBaseMapper();
-//		HBaseBolt hbase2 = new CustomHBaseBolt(APLogScheme.AGG_TABLE, aggMapper).withConfigKey("hbase.conf");
-//		builder.setBolt(HBASE_AGG_BOLT_ID, hbase2, 1).fieldsGrouping(KAFKA_SPOUT_ID, new Fields(APLogScheme.FIELD_AGG_ID));
-//	}
-
 	private void buildAndSubmit() throws AlreadyAliveException, InvalidTopologyException, AuthorizationException {
 		final int numWorkers = Integer.valueOf(topologyConfig.getProperty("num.workers"));
 		Config config = new Config();
@@ -147,13 +117,8 @@ public class ApLogAnalyzer extends LogBaseTopology {
 		TopologyBuilder builder = new TopologyBuilder();
 		configureKafkaSpout(builder, config);
 		configureESBolts(builder, config);
-//		configureHBaseBolts(builder, config);
-
-//		conf.put(Config.NIMBUS_HOST, "hdp01.localdomain");
-//		System.setProperty("storm.jar", "/root/workspace//LearnStorm/target/LearnStorm-0.0.1-SNAPSHOT.jar");
-//		System.setProperty("hadoop.home.dir", "/tmp");
-//		LocalCluster cluster = new LocalCluster();
-		StormSubmitter.submitTopology("ApLogAnalyzerV1", config, builder.createTopology());
+		LocalCluster cluster = new LocalCluster();
+		cluster.submitTopology("ApLogAnalyzerV1", config, builder.createTopology());
 	}
 
 	public static void main(String args[]) throws Exception {

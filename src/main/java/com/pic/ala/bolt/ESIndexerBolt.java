@@ -22,7 +22,6 @@ import static com.pic.ala.util.LogUtil.isNullOrEmpty;
 
 import java.net.InetAddress;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -89,7 +88,7 @@ public class ESIndexerBolt extends BaseRichBolt {
 					"ElasticSearch configuration not found using key '" + this.configKey + "'");
 		}
 
-		Map<String, Object> conf = (HashMap<String, Object>) stormConf.get(this.configKey);
+		Map<String, Object> conf = (Map<String, Object>) stormConf.get(this.configKey);
 
 		esAsyncEnabled = Boolean.parseBoolean((String)conf.get(ES_ASYNC_ENABLED));
 		String esClusterName = (String)conf.get(ES_CLUSTER_NAME);
@@ -132,7 +131,6 @@ public class ESIndexerBolt extends BaseRichBolt {
 				List<String> esNodesList = Arrays.asList(esNodes.split("\\s*,\\s*"));
 				for (String esNode : esNodesList) {
 					try {
-
 						preBuiltTransportClient.addTransportAddress(
 								new InetSocketTransportAddress(InetAddress.getByName(esNode), 9300));
 					} catch (Exception e) {
