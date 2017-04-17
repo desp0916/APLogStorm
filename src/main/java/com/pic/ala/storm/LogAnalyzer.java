@@ -1,4 +1,4 @@
-package com.pic.ala;
+package com.pic.ala.storm;
 
 import java.util.HashMap;
 
@@ -13,8 +13,8 @@ import org.apache.storm.kafka.spout.KafkaSpoutRetryExponentialBackoff;
 import org.apache.storm.kafka.spout.KafkaSpoutRetryExponentialBackoff.TimeInterval;
 import org.apache.storm.topology.TopologyBuilder;
 
-import com.pic.ala.bolt.ESIndexBolt;
-import com.pic.ala.scheme.LogScheme;
+import com.pic.ala.storm.bolt.ESIndexBoltForApLog;
+import com.pic.ala.storm.translator.LogRecordTranslator;
 
 public class LogAnalyzer extends LogBaseTopology {
 
@@ -23,11 +23,9 @@ public class LogAnalyzer extends LogBaseTopology {
 	private static final String KAFKA_SPOUT_ID = "kafkaSpout";
 	private static final String ESINDEX_BOLT_ID = "ESIndexBolt";
 	private static final String CONSUMER_GROUP_ID = "log-analyzer";
-	private LogScheme logScheme;
 
 	public LogAnalyzer(String configFileLocation) throws Exception {
 		super(configFileLocation);
-		logScheme = new LogScheme();
 	}
 
 	private KafkaSpoutConfig<String, String> constructKafkaSpoutConf() {
@@ -43,13 +41,16 @@ public class LogAnalyzer extends LogBaseTopology {
 //		spoutConfig.retryDelayMultiplier = 1.1;		// 10, 11, 12.1, 13.31, 14.641...
 //		spoutConfig.retryDelayMaxMs = 590000;		// about 10 minutes
 
+		LogRecordTranslator<String, String> logRecordTranslator = new LogRecordTranslator<>();
+
 		final KafkaSpoutConfig<String, String> spoutConfig = KafkaSpoutConfig.builder(bootstrapServers, topic)
 			.setGroupId(CONSUMER_GROUP_ID)
-			.setMaxPollRecords(5)
+			.setMaxPollRecords(500)
 			.setRetry(new KafkaSpoutRetryExponentialBackoff(TimeInterval.seconds(10), TimeInterval.milliSeconds(2000),
-					KafkaSpoutConfig.DEFAULT_MAX_RETRIES, TimeInterval.seconds(10000)))
-			.setMaxUncommittedOffsets(250)
-			.setPollTimeoutMs(1000)
+					KafkaSpoutConfig.DEFAULT_MAX_RETRIES, TimeInterval.seconds(600)))
+			.setMaxUncommittedOffsets(2500)
+			.setPollTimeoutMs(10000)
+			.setRecordTranslator(logRecordTranslator)
 			.build();
 
 		return spoutConfig;
@@ -64,16 +65,16 @@ public class LogAnalyzer extends LogBaseTopology {
 
 	private void configureESBolts(TopologyBuilder builder, Config config) {
 		HashMap<String, Object> esConfig = new HashMap<String, Object>();
-		esConfig.put(ESIndexBolt.ES_CLUSTER_NAME, topologyConfig.getProperty(ESIndexBolt.ES_CLUSTER_NAME));
-		esConfig.put(ESIndexBolt.ES_NODES, topologyConfig.getProperty(ESIndexBolt.ES_NODES));
-		esConfig.put(ESIndexBolt.ES_SHIELD_ENABLED, topologyConfig.getProperty(ESIndexBolt.ES_SHIELD_ENABLED));
-		esConfig.put(ESIndexBolt.ES_SHIELD_USER, topologyConfig.getProperty(ESIndexBolt.ES_SHIELD_USER));
-		esConfig.put(ESIndexBolt.ES_SHIELD_PASS, topologyConfig.getProperty(ESIndexBolt.ES_SHIELD_PASS));
-		esConfig.put(ESIndexBolt.ES_INDEX_NAME, topologyConfig.getProperty(ESIndexBolt.ES_INDEX_NAME));
-		esConfig.put(ESIndexBolt.ES_INDEX_TYPE, topologyConfig.getProperty(ESIndexBolt.ES_INDEX_TYPE));
-		esConfig.put(ESIndexBolt.ES_ASYNC_ENABLED, topologyConfig.getProperty(ESIndexBolt.ES_ASYNC_ENABLED));
+		esConfig.put(ESIndexBoltForApLog.ES_CLUSTER_NAME, topologyConfig.getProperty(ESIndexBoltForApLog.ES_CLUSTER_NAME));
+		esConfig.put(ESIndexBoltForApLog.ES_NODES, topologyConfig.getProperty(ESIndexBoltForApLog.ES_NODES));
+		esConfig.put(ESIndexBoltForApLog.ES_SHIELD_ENABLED, topologyConfig.getProperty(ESIndexBoltForApLog.ES_SHIELD_ENABLED));
+		esConfig.put(ESIndexBoltForApLog.ES_SHIELD_USER, topologyConfig.getProperty(ESIndexBoltForApLog.ES_SHIELD_USER));
+		esConfig.put(ESIndexBoltForApLog.ES_SHIELD_PASS, topologyConfig.getProperty(ESIndexBoltForApLog.ES_SHIELD_PASS));
+		esConfig.put(ESIndexBoltForApLog.ES_INDEX_NAME, topologyConfig.getProperty(ESIndexBoltForApLog.ES_INDEX_NAME));
+		esConfig.put(ESIndexBoltForApLog.ES_INDEX_TYPE, topologyConfig.getProperty(ESIndexBoltForApLog.ES_INDEX_TYPE));
+		esConfig.put(ESIndexBoltForApLog.ES_ASYNC_ENABLED, topologyConfig.getProperty(ESIndexBoltForApLog.ES_ASYNC_ENABLED));
 		config.put("es.conf", esConfig);
-		ESIndexBolt esBolt = new ESIndexBolt().withConfigKey("es.conf");
+		ESIndexBoltForApLog esBolt = new ESIndexBoltForApLog().withConfigKey("es.conf");
 		final int boltThreads = Integer.valueOf(topologyConfig.getProperty("bolt.ESIndexBolt.threads"));
 
 		builder.setBolt(ESINDEX_BOLT_ID, esBolt, boltThreads).shuffleGrouping(KAFKA_SPOUT_ID).setDebug(DEBUG);

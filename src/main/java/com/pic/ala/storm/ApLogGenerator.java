@@ -19,12 +19,13 @@
  *
  */
 
-package com.pic.ala;
+package com.pic.ala.storm;
 
 import java.util.Properties;
 
 import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
+import org.apache.storm.StormSubmitter;
 import org.apache.storm.generated.AlreadyAliveException;
 import org.apache.storm.generated.AuthorizationException;
 import org.apache.storm.generated.InvalidTopologyException;
@@ -33,7 +34,7 @@ import org.apache.storm.kafka.bolt.mapper.FieldNameBasedTupleToKafkaMapper;
 import org.apache.storm.kafka.bolt.selector.DefaultTopicSelector;
 import org.apache.storm.topology.TopologyBuilder;
 
-import com.pic.ala.spout.RandomLogSpout;
+import com.pic.ala.storm.spout.RandomLogSpout;
 
 public class ApLogGenerator extends LogBaseTopology {
 
@@ -83,8 +84,8 @@ public class ApLogGenerator extends LogBaseTopology {
 		configureRandomLogSpout(builder, config);
 		configureKafkaBolt(builder, config);
 
-		LocalCluster cluster = new LocalCluster();
-		cluster.submitTopology("ApLogGeneratorV1", config, builder.createTopology());
+//		LocalCluster cluster = new LocalCluster();
+		StormSubmitter.submitTopology("ApLogGeneratorV1", config, builder.createTopology());
 	}
 
 	public static void main(String[] args) throws Exception {

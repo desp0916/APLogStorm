@@ -15,7 +15,7 @@
  * https://www.elastic.co/guide/en/elasticsearch/client/java-api/1.7/index-doc.html
  */
 
-package com.pic.ala.bolt;
+package com.pic.ala.storm.bolt;
 
 import static com.pic.ala.util.LogUtil.isDateValid;
 import static com.pic.ala.util.LogUtil.isNullOrEmpty;
@@ -45,14 +45,14 @@ import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.pic.ala.scheme.ApLogScheme;
+import com.pic.ala.storm.translator.ApLogRecordTranslator;
 
-public class ESIndexerBolt extends BaseRichBolt {
+public class ESIndexBoltForLog extends BaseRichBolt {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ESIndexerBolt.class);
+	private static final long serialVersionUID = -7449011180314830016L;
+	private static final Logger LOG = LoggerFactory.getLogger(ESIndexBoltForLog.class);
 	private static final String ES_INDEX_PREFIX = "aplog_";
 	private static Client client;
-	private static TransportClient transportClient;
 	private OutputCollector collector;
 
 	protected String configKey;
@@ -71,7 +71,7 @@ public class ESIndexerBolt extends BaseRichBolt {
 	// Instead modify the setting "es.async.enabled" in "LogAnalyzer.properties" file.
 	private static boolean esAsyncEnabled = true;
 
-	public ESIndexerBolt withConfigKey(final String configKey) {
+	public ESIndexBoltForLog withConfigKey(final String configKey) {
 		this.configKey = configKey;
 		return this;
 	}
@@ -126,7 +126,7 @@ public class ESIndexerBolt extends BaseRichBolt {
 
 		PreBuiltTransportClient preBuiltTransportClient = new PreBuiltTransportClient(settings);
 
-		synchronized (ESIndexerBolt.class) {
+		synchronized (ESIndexBoltForLog.class) {
 			if (client == null) {
 				List<String> esNodesList = Arrays.asList(esNodes.split("\\s*,\\s*"));
 				for (String esNode : esNodesList) {
@@ -149,15 +149,15 @@ public class ESIndexerBolt extends BaseRichBolt {
 	@Override
 	public void execute(Tuple tuple) {
 
-		String sysID = (String) tuple.getValueByField(ApLogScheme.FIELD_SYS_ID);
-		String logType = (String) tuple.getValueByField(ApLogScheme.FIELD_LOG_TYPE);
-		String logDate = (String) tuple.getValueByField(ApLogScheme.FIELD_LOG_DATE);
-		String apID = (String) tuple.getValueByField(ApLogScheme.FIELD_AP_ID);
-		String at = (String) tuple.getValueByField(ApLogScheme.FIELD_AT);
-		String msg = (String) tuple.getValueByField(ApLogScheme.FIELD_MSG);
-		String toBeIndexed = (String) tuple.getValueByField(ApLogScheme.FIELD_ES_SOURCE);
+		String sysID = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_SYS_ID);
+		String logType = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_LOG_TYPE);
+		String logDate = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_LOG_DATE);
+		String apID = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_AP_ID);
+		String at = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_AT);
+		String msg = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_MSG);
+		String toBeIndexed = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_ES_SOURCE);
 
-		if (!isDateValid(logDate, ApLogScheme.FORMAT_DATE)) {
+		if (!isDateValid(logDate, ApLogRecordTranslator.FORMAT_DATE)) {
 			LOG.error("The format of logDate is null or invalid: {}", logDate);
 			collector.ack(tuple);
 			return;

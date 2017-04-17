@@ -1,8 +1,8 @@
 #!/bin/sh
 
-export TOPOLOGY_JAR="target/LearnStorm-0.0.1-SNAPSHOT.jar"
-export STORM_CMD="/bin/storm"	# HDP2.4.2
-export TOPOLOGY_PACKAGE="com.pic.ala"
+export TOPOLOGY_JAR="target/aplogstorm-0.0.1-SNAPSHOT.jar"
+export STORM_CMD="/bin/storm"	# HDP2.6.0
+export TOPOLOGY_PACKAGE="com.pic.ala.storm"
 export TOPOLOGIES="ApLogGenerator ApLogAnalyzer LogAnalyzer"
 
 for topology in $TOPOLOGIES

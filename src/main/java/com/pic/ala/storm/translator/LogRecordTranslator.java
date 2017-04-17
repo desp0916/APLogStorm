@@ -1,12 +1,12 @@
-package com.pic.ala.scheme;
+package com.pic.ala.storm.translator;
 
 import static com.pic.ala.util.LogUtil.parseDateTime;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.storm.spout.Scheme;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.storm.kafka.spout.RecordTranslator;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
@@ -14,9 +14,21 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class LogScheme implements Scheme {
+/**
+ * 
+ * Translate a {@link org.apache.kafka.clients.consumer.ConsumerRecord} to a tuple.
+ *  
+ * @author Gary Liu <gary_liu@pic.net.tw>
+ * @since  2017-04-17 14:03:02
+ *
+ * @param <K>
+ * @param <V>
+ */
+public class LogRecordTranslator<K, V> implements RecordTranslator<K, V> {
 
-	private static final Logger LOG = LoggerFactory.getLogger(LogScheme.class);
+	private static final long serialVersionUID = -7412940397600025976L;
+
+	private static final Logger LOG = LoggerFactory.getLogger(LogRecordTranslator.class);
 
 	public static final String FORMAT_DATE = "yyyy.MM.dd";
 
@@ -34,10 +46,9 @@ public class LogScheme implements Scheme {
 	public static final String FIELD_LOG_DATE = "logDate";
 	public static final String FIELD_LOG_DATETIME = "logDateTime";
 	public static final String FIELD_MESSAGE = "message";
-
+	
 	@Override
-	public List<Object> deserialize(ByteBuffer byteBuffer) {
-
+	public List<Object> apply(ConsumerRecord<K, V> record) {
 		String esSource = "";
 		String index = "";
 		String type = "";
@@ -45,10 +56,10 @@ public class LogScheme implements Scheme {
 		String logDate = "";
 
 		try {
-			esSource = new String(byteBuffer.array(), "UTF-8");
+			esSource = (String)record.value();
 
 			ObjectMapper objectMapper = new ObjectMapper();
-			Map<String,String> logEntry = objectMapper.readValue(esSource, Map.class);
+			Map<String, String> logEntry = objectMapper.readValue(esSource, Map.class);
 
 			index = logEntry.get(FIELD_INDEX);
 			type = logEntry.get(FIELD_TYPE);
@@ -69,9 +80,14 @@ public class LogScheme implements Scheme {
 	}
 
 	@Override
-	public Fields getOutputFields() {
+	public Fields getFieldsFor(String stream) {
 		return new Fields(FIELD_ES_SOURCE, FIELD_INDEX, FIELD_TYPE,
 				FIELD_LOG_DATE, FIELD_MESSAGE);
+	}
+
+	@Override
+	public List<String> streams() {
+		return DEFAULT_STREAM;
 	}
 
 }

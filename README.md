@@ -1,4 +1,4 @@
-# Learning Apache Storm
+# Storm Topologies for Application Logstream Processing
 
 There are two Storm topologies for [ELK stack](https://www.elastic.co/products).
 
@@ -10,8 +10,6 @@ The overall data flow works as the following diagram:
 ```
 log stream ==> Logstash ==> Kafka ==> Storm Topology ==> Elasticsearch
 ```
-
-Before using this project, you must install the [shaded jar](https://github.com/desp0916/es-shaded) for ElasticSearch 2.3.4 to your local Maven repository.
 
 JDK 8 or above is required. Also, you have to install `tools.jar` first, which is normally locate at `$JAVA_HOME/lib/tools.jar`.
 

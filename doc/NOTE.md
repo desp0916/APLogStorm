@@ -1,0 +1,1 @@
+cd /usr/hdp/2.6.0.3-8/storm/lib && ln -s /usr/hdp/2.6.0.3-8/hadoop/lib/commons-lang-2.6.jar commons-lang.jar

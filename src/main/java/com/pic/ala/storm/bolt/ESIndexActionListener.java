@@ -10,7 +10,7 @@
  * message *until the tuple is successfully processed*.
  *
  */
-package com.pic.ala.bolt;
+package com.pic.ala.storm.bolt;
 
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.tuple.Tuple;
