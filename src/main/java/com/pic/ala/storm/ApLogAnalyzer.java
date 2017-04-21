@@ -68,13 +68,13 @@ public class ApLogAnalyzer extends LogBaseTopology {
 //		spoutConfig.retryDelayMaxMs = 590000;		// about 10 minutes
 
 		ApLogRecordTranslator<String, String> apLogRecordTranslator = new ApLogRecordTranslator<>();
-		
+
 		final KafkaSpoutConfig<String, String> spoutConfig = KafkaSpoutConfig.builder(bootstrapServers, topic)
 			.setGroupId(CONSUMER_GROUP_ID)
 			.setMaxPollRecords(500)
 			.setRetry(new KafkaSpoutRetryExponentialBackoff(TimeInterval.seconds(10), TimeInterval.milliSeconds(2000),
 					KafkaSpoutConfig.DEFAULT_MAX_RETRIES, TimeInterval.seconds(600)))
-			.setMaxUncommittedOffsets(2500)
+			.setMaxUncommittedOffsets(500)
 			.setPollTimeoutMs(10000)
 			.setRecordTranslator(apLogRecordTranslator)
 			.build();
