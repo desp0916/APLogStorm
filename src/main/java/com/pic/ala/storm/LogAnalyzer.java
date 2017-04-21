@@ -45,11 +45,12 @@ public class LogAnalyzer extends LogBaseTopology {
 
 		final KafkaSpoutConfig<String, String> spoutConfig = KafkaSpoutConfig.builder(bootstrapServers, topic)
 			.setGroupId(CONSUMER_GROUP_ID)
-			.setMaxPollRecords(500)
+			.setOffsetCommitPeriodMs(5000L)		// offset 的 commit 週期（單位：毫秒）
+			.setMaxUncommittedOffsets(10000000)	// 未 commit 的 offset 數量最大值（越大，會越使用越多記憶體）
+			.setMaxPollRecords(100)				// 每次輪詢最多可抓幾筆 records？
+			.setPollTimeoutMs(5000L)			// 當輪詢沒有資料時，要等待多久（單位：毫秒）？
 			.setRetry(new KafkaSpoutRetryExponentialBackoff(TimeInterval.seconds(10), TimeInterval.milliSeconds(2000),
 					KafkaSpoutConfig.DEFAULT_MAX_RETRIES, TimeInterval.seconds(600)))
-			.setMaxUncommittedOffsets(2500)
-			.setPollTimeoutMs(10000)
 			.setRecordTranslator(logRecordTranslator)
 			.build();
 
