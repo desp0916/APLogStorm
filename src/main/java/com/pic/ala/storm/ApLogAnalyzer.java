@@ -1,27 +1,3 @@
-/**
- * Ref: https://github.com/apache/storm/tree/master/external/storm-kafka
- *
- * 1. Create a table with HBase shell:
- *
- *     create 'aes3g', 'cf'
- *
- * 2. Submit this topology to consume the topic on Kafka and ingest into Hbase:
- *
- *     storm jar target/LearnStorm-0.0.1-SNAPSHOT.jar com.pic.ala.ApLogAnalyzer
- *
- * 3. Understanding the Parallelism of a Storm Topology
- *
- *   http://www.michael-noll.com/blog/2012/10/16/understanding-the-parallelism-of-a-storm-topology/
- *
- * 4. KafkaSpout 浅析
- *
- *   http://www.cnblogs.com/cruze/p/4241181.html
- *
- * 5. Unofficial Storm and Kafka Best Practices Guide
- *
- *   https://community.hortonworks.com/articles/550/unofficial-storm-and-kafka-best-practices-guide.html
- */
-
 package com.pic.ala.storm;
 
 import java.util.HashMap;
@@ -40,6 +16,13 @@ import org.apache.storm.topology.TopologyBuilder;
 import com.pic.ala.storm.bolt.ESIndexBoltForLog;
 import com.pic.ala.storm.translator.ApLogRecordTranslator;
 
+/**
+ * This topology consumes application logstream from Kafka,
+ * and then indexes them into Elasticsearch.
+ *
+ * @author gary
+ * @since  2017年4月21日 下午4:34:23
+ */
 public class ApLogAnalyzer extends LogBaseTopology {
 
 	private static boolean DEBUG = false;
@@ -69,13 +52,18 @@ public class ApLogAnalyzer extends LogBaseTopology {
 
 		ApLogRecordTranslator<String, String> apLogRecordTranslator = new ApLogRecordTranslator<>();
 
+		/**
+		 * 以下參數設定會影響到 KafkaSpout 的效能，所以請參考：
+		 * https://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.6.0/bk_storm-component-guide/content/storm-kafkaspout-perf.html
+		 */
 		final KafkaSpoutConfig<String, String> spoutConfig = KafkaSpoutConfig.builder(bootstrapServers, topic)
 			.setGroupId(CONSUMER_GROUP_ID)
-			.setMaxPollRecords(500)
+			.setOffsetCommitPeriodMs(5000L)		// offset 的 commit 週期（單位：毫秒）
+			.setMaxUncommittedOffsets(10000000)	// 未 commit 的 offset 數量最大值（越大，會越使用越多記憶體）
+			.setMaxPollRecords(100)				// 每次輪詢最多可抓幾筆 records？
+			.setPollTimeoutMs(2000L)			// 當輪詢沒有資料時，要等待多久（單位：毫秒）？
 			.setRetry(new KafkaSpoutRetryExponentialBackoff(TimeInterval.seconds(10), TimeInterval.milliSeconds(2000),
 					KafkaSpoutConfig.DEFAULT_MAX_RETRIES, TimeInterval.seconds(600)))
-			.setMaxUncommittedOffsets(500)
-			.setPollTimeoutMs(10000)
 			.setRecordTranslator(apLogRecordTranslator)
 			.build();
 
