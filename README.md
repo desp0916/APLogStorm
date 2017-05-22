@@ -72,19 +72,19 @@ curl -XPUT -u es_admin:password "http://hdpr01wn01:9200/_template/aplog*?pretty=
           "type" : "string",
           "index": "not_analyzed"
         },
-        "at" : {
+        "reqAt" : {
           "type" : "string",
           "index": "not_analyzed"
         },
-        "to" : {
+        "reqTo" : {
           "type" : "string",
           "index": "not_analyzed"
         },
-        "action" : {
+        "reqAction" : {
           "type" : "string",
           "index": "not_analyzed"
         },
-        "result" : {
+        "reqResult" : {
           "type" : "string",
           "index": "not_analyzed"
         },
