@@ -38,7 +38,7 @@ public class RandomLogSpout extends BaseRichSpout {
 			Utils.sleep(ThreadLocalRandom.current().nextInt(1, 11) * 1000);
 			final String sysID = ApLog.getRandomOption(ApLog.SYSTEMS);
 			final String logType = ApLog.getRandomOption(ApLog.LOG_TYPES);
-			final ApLog log = new ApLog(sysID, logType);
+			final ApLog log = new ApLog(sysID, logType, null);
 			String msgId = UUID.randomUUID().toString();
 			_pending.put(msgId, System.currentTimeMillis());
 			_collector.emit(new Values(objectMapper.writeValueAsString(log)), msgId);

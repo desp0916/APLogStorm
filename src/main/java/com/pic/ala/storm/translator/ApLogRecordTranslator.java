@@ -15,9 +15,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pic.ala.model.ApLog;
 
 /**
- * 
+ *
  * Translate a {@link org.apache.kafka.clients.consumer.ConsumerRecord} to a tuple.
- *  
+ *
  * @author Gary Liu <gary_liu@pic.net.tw>
  * @since  2017-04-17 10:41:11
  *
@@ -47,16 +47,16 @@ public class ApLogRecordTranslator<K, V> implements RecordTranslator<K, V> {
 	public static final String FIELD_AP_ID = "apID";
 	public static final String FIELD_FUNCT_ID = "functID";
 	public static final String FIELD_WHO = "who";
-	public static final String FIELD_FROM = "from";
-	public static final String FIELD_AT = "at";
-	public static final String FIELD_TO = "to";
-	public static final String FIELD_ACTION = "action";
-	public static final String FIELD_RESULT = "result";
+	public static final String FIELD_FROM = "reqFrom";
+	public static final String FIELD_AT = "reqAt";
+	public static final String FIELD_TO = "reqTo";
+	public static final String FIELD_ACTION = "reqAction";
+	public static final String FIELD_RESULT = "reqResult";
 	public static final String FIELD_KW = "kw";
 	public static final String FIELD_MSG_LEVEL = "msgLevel";
 	public static final String FIELD_MSG = "msg";
 	public static final String FIELD_MSG_CODE = "msgCode";
-	public static final String FIELD_TABLE = "table";
+	public static final String FIELD_TABLE = "reqTable";
 	public static final String FIELD_DATA_CNT = "dataCnt";
 	public static final String FIELD_PROC_TIME = "procTime";
 
@@ -80,7 +80,7 @@ public class ApLogRecordTranslator<K, V> implements RecordTranslator<K, V> {
 			sysID = apLog.getSysID();
 			logType = apLog.getLogType();
 			apID = apLog.getApID();
-			at = apLog.getAt();
+			at = apLog.getReqAt();
 			msg = apLog.getMsg();
 			String tmpLogDate = parseDateTime(apLog.getLogTime(), FORMATS, FORMAT_DATE);
 
@@ -92,7 +92,7 @@ public class ApLogRecordTranslator<K, V> implements RecordTranslator<K, V> {
 			LOG.error(e.getMessage());
 			e.printStackTrace();
 		}
-		
+
 		return new Values(esSource, sysID, logType, logDate, apID, at, msg);
 	}
 
