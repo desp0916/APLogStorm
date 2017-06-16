@@ -131,7 +131,7 @@ public class ApLog {
 			this.reqAction = getRandomOption(actions);
 		}
 
-		this.logTime = getISO8601Time();
+		this.logTime = getISO8601Time("yyyy-MM-dd HH:mm:ss.SSS");
 		this.functID = getRandomOption(functionIDs);
 		this.reqResult = getRandomOption(results);
 		this.kw = getRandomOption(keywords);
