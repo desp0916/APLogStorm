@@ -39,21 +39,25 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.indices.IndexClosedException;
 import org.elasticsearch.node.NodeClosedException;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.pic.ala.storm.translator.LogRecordTranslator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pic.ala.model.ApLog;
+import com.pic.ala.storm.translator.ApLogRecordTranslator;
 
 public class ESIndexBoltForApLog extends BaseRichBolt {
 
-	private static final long serialVersionUID = 3679185896129567534L;
+	private static final long serialVersionUID = -7449011180314830016L;
 	private static final Logger LOG = LoggerFactory.getLogger(ESIndexBoltForApLog.class);
-	private static final String ES_INDEX_PREFIX = "";
+	private static final String ES_INDEX_PREFIX = "aplog_";
 	private static Client client;
-//	private static TransportClient transportClient;
 	private OutputCollector collector;
+	private ObjectMapper objectMapper;
 
 	protected String configKey;
 
@@ -63,12 +67,9 @@ public class ESIndexBoltForApLog extends BaseRichBolt {
 	public static final String ES_SHIELD_USER = "es.shield.user";
 	public static final String ES_SHIELD_PASS = "es.shield.pass";
 	public static final int MIN_CONNECTED_NODES = 5;
-	public static final String ES_INDEX_NAME = "es.index.name";
-	public static final String ES_INDEX_TYPE = "es.index.type";
+//	public static final String ES_INDEX_NAME = "es.index.name";
+//	public static final String ES_INDEX_TYPE = "es.index.type";
 	public static final String ES_ASYNC_ENABLED = "es.async.enabled";
-
-	private String defaultIndex;
-	private String defaultType;
 
 	// DO NOT MODIFY HERE.
 	// Instead modify the setting "es.async.enabled" in "LogAnalyzer.properties" file.
@@ -76,6 +77,7 @@ public class ESIndexBoltForApLog extends BaseRichBolt {
 
 	public ESIndexBoltForApLog withConfigKey(final String configKey) {
 		this.configKey = configKey;
+		this.objectMapper = new ObjectMapper();
 		return this;
 	}
 
@@ -93,16 +95,12 @@ public class ESIndexBoltForApLog extends BaseRichBolt {
 
 		Map<String, Object> conf = (Map<String, Object>) stormConf.get(this.configKey);
 
+		esAsyncEnabled = Boolean.parseBoolean((String)conf.get(ES_ASYNC_ENABLED));
 		String esClusterName = (String)conf.get(ES_CLUSTER_NAME);
 		String esNodes = (String)conf.get(ES_NODES);
-
-		esAsyncEnabled = Boolean.parseBoolean((String)conf.get(ES_ASYNC_ENABLED));
 		boolean esShieldEnabled = Boolean.parseBoolean((String)conf.get(ES_SHIELD_ENABLED));
 		String esShieldUser = (String)conf.get(ES_SHIELD_USER);
 		String esShieldPass = (String)conf.get(ES_SHIELD_PASS);
-
-		this.defaultIndex = (String)conf.get(ES_INDEX_NAME);
-		this.defaultType = (String)conf.get(ES_INDEX_TYPE);
 
 		if (esClusterName == null) {
 			throw new IllegalArgumentException("No '" + ES_CLUSTER_NAME
@@ -138,7 +136,6 @@ public class ESIndexBoltForApLog extends BaseRichBolt {
 				List<String> esNodesList = Arrays.asList(esNodes.split("\\s*,\\s*"));
 				for (String esNode : esNodesList) {
 					try {
-
 						preBuiltTransportClient.addTransportAddress(
 								new InetSocketTransportAddress(InetAddress.getByName(esNode), 9300));
 					} catch (Exception e) {
@@ -157,24 +154,35 @@ public class ESIndexBoltForApLog extends BaseRichBolt {
 	@Override
 	public void execute(Tuple tuple) {
 
-		String index = (String) tuple.getValueByField(LogRecordTranslator.FIELD_INDEX);
-		String type = (String) tuple.getValueByField(LogRecordTranslator.FIELD_TYPE);
-		String logDate = (String) tuple.getValueByField(LogRecordTranslator.FIELD_LOG_DATE);
-		String message = (String) tuple.getValueByField(LogRecordTranslator.FIELD_MESSAGE);
-		String toBeIndexed = (String) tuple.getValueByField(LogRecordTranslator.FIELD_ES_SOURCE);
+		String sysID = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_SYS_ID);
+		String logType = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_LOG_TYPE);
+		String logDate = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_LOG_DATE);
+		String apID = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_AP_ID);
+		String at = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_AT);
+		String msg = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_MSG);
+//		String esSource = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_ES_SOURCE);
+		ApLog apLog  = (ApLog) tuple.getValueByField(ApLogRecordTranslator.FIELD_APLOG);
+		String toBeIndexed = null;
 
-		if (isNullOrEmpty(index)) {
-			index = defaultIndex;
+		try {
+			toBeIndexed = objectMapper.writeValueAsString(apLog);
+		} catch (JsonProcessingException e1) {
+//			e1.printStackTrace();
+			LOG.error("Failed to transform ApLog to string: {}", apLog);
+			collector.ack(tuple);
+			return;
 		}
-		if (isNullOrEmpty(type)) {
-			type = defaultType;
-		}
-		if (!isDateValid(logDate, LogRecordTranslator.FORMAT_DATE)) {
+
+		if (!isDateValid(logDate, ApLogRecordTranslator.FORMAT_DATE)) {
 			LOG.error("The format of logDate is null or invalid: {}", logDate);
 			collector.ack(tuple);
 			return;
 		}
-		if (isNullOrEmpty(logDate)	|| isNullOrEmpty(message) || isNullOrEmpty(toBeIndexed)) {
+
+		if (isNullOrEmpty(sysID) || isNullOrEmpty(logType) || isNullOrEmpty(logDate)
+			|| isNullOrEmpty(apID) || isNullOrEmpty(at) || isNullOrEmpty(msg)
+			|| isNullOrEmpty(toBeIndexed))
+		{
 			LOG.error("Received null or incorrect value from tuple: {}", toBeIndexed);
 			collector.ack(tuple);
 			return;
@@ -189,38 +197,42 @@ public class ESIndexBoltForApLog extends BaseRichBolt {
 			if (esAsyncEnabled) {
 				// Asynchronous way
 				ListenableActionFuture<IndexResponse> future = client
-						.prepareIndex(ES_INDEX_PREFIX + index.toLowerCase()
-							+ "-" + logDate, type.toLowerCase())
+						.prepareIndex(ES_INDEX_PREFIX + sysID.toLowerCase()
+							+ "-" + logDate, logType.toLowerCase())
 						.setSource(toBeIndexed).execute();
 				future.addListener(new ESIndexActionListener(tuple, collector, LOG));
 				future.actionGet();
 			} else {
 				// Synchronous way
 				IndexResponse response = client
-						.prepareIndex(ES_INDEX_PREFIX + index.toLowerCase()
-							+ "-" + logDate, type.toLowerCase())
+						.prepareIndex(ES_INDEX_PREFIX + sysID.toLowerCase()
+							+ "-" + logDate, logType.toLowerCase())
 						.setSource(toBeIndexed).get();
 				if (response == null) {
-					collector.reportError(new Throwable("ES null response"));
+					collector.reportError(new RuntimeException("ES null response"));
 					collector.fail(tuple);
 					LOG.error("Failed to index tuple due to ES null reponse: {} ", tuple.toString());
 				} else {
 					if (!response.getId().isEmpty()) {
 						collector.ack(tuple);
 						String documentId = response.getId();
-						String logMsg = "Indexed successfully [" + index + "/"+ type + "/" + documentId + "]";
+						String logMsg = "Indexed successfully [" + sysID + "/"+ logType + "/" + documentId + "]";
 						// Anchored
 						collector.emit(tuple, new Values(documentId));
 						LOG.info(logMsg);
 						LOG.debug("{} on tuple: {} ", logMsg, tuple.toString());
 					} else {
-						collector.reportError(new Throwable(response.toString()));
+						collector.reportError(new RuntimeException(response.toString()));
 						collector.fail(tuple);
 						LOG.error("Failed to index tuple: {} ", tuple.toString());
 					}
 				}
 			}
 		// We should try our best to handle all exceptions to ingest all logs.
+		} catch (IndexClosedException ice) {
+			ice.printStackTrace();
+			collector.reportError(ice);
+			collector.fail(tuple);
 		} catch (NodeClosedException nce) {
 			nce.printStackTrace();
 			collector.reportError(nce);

@@ -84,7 +84,7 @@ public class ApLog {
 	private String msgCode = "";		// 訊息代碼 (optional)
 
 	private String reqTable = "";		// 資料表名稱 (optional)
-	private int dataCnt;				// 資料筆數 (optional)
+	private Integer dataCnt;			// 資料筆數 (optional)
 	private Integer procTime;			// 處理時間（optional）
 
 	public ApLog() {}
@@ -310,11 +310,11 @@ public class ApLog {
 		this.reqTable = reqTable;
 	}
 
-	public int getDataCnt() {
+	public Integer getDataCnt() {
 		return dataCnt;
 	}
 
-	public void setDataCnt(int dataCnt) {
+	public void setDataCnt(Integer dataCnt) {
 		this.dataCnt = dataCnt;
 	}
 

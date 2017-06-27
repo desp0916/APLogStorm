@@ -1,7 +1,9 @@
 package com.pic.ala.storm.translator;
 
+import static com.pic.ala.util.LogUtil.isNullOrEmpty;
 import static com.pic.ala.util.LogUtil.parseDateTime;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -12,12 +14,14 @@ import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * 
+ *
  * Translate a {@link org.apache.kafka.clients.consumer.ConsumerRecord} to a tuple.
- *  
+ *
  * @author Gary Liu <gary_liu@pic.net.tw>
  * @since  2017-04-17 14:03:02
  *
@@ -46,7 +50,7 @@ public class LogRecordTranslator<K, V> implements RecordTranslator<K, V> {
 	public static final String FIELD_LOG_DATE = "logDate";
 	public static final String FIELD_LOG_DATETIME = "logDateTime";
 	public static final String FIELD_MESSAGE = "message";
-	
+
 	@Override
 	public List<Object> apply(ConsumerRecord<K, V> record) {
 		String esSource = "";
@@ -67,11 +71,17 @@ public class LogRecordTranslator<K, V> implements RecordTranslator<K, V> {
 
 			String tmpLogDate = parseDateTime(logEntry.get("@timestamp"), FORMATS, FORMAT_DATE);
 
-			if (tmpLogDate != null) {
+			if (!isNullOrEmpty(tmpLogDate)) {
 				logDate = tmpLogDate;
 			}
 
-		} catch (Exception e) {
+		} catch (JsonParseException e) {
+			LOG.error(e.getMessage());
+			e.printStackTrace();
+		} catch (JsonMappingException e) {
+			LOG.error(e.getMessage());
+			e.printStackTrace();
+		} catch (IOException e) {
 			LOG.error(e.getMessage());
 			e.printStackTrace();
 		}

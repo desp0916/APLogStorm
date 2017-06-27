@@ -6,12 +6,15 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
 public class LogUtil {
 
-	private static final DateTimeFormatter fmt = ISODateTimeFormat.dateTime();
+	private static final DateTimeFormatter LOCAL_DATETIMEFORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS").withZone(DateTimeZone.forID("Asia/Taipei"));
+	private static final DateTimeFormatter ISO8601_DATETIMEFORMATTER = ISODateTimeFormat.dateTime().withZone(DateTimeZone.forID("Asia/Taipei"));
 
 	/**
 	 * Get current moment in ISO 8601 format
@@ -97,17 +100,7 @@ public class LogUtil {
 		return true;
 	}
 
-	/**
-	 * 將字串轉換為日期
-	 *
-	 * @param dateTimeFormatter		日期時間格式轉換器
-	 * @param str					要轉換的字串
-	 * @return						轉換結果
-	 */
-	public static String dateToString(String str, DateTimeFormatter dateTimeFormatter) {
-		DateTime dt = dateTimeFormatter.parseDateTime(str);
-		return dt.toString(fmt);
-	}
+
 
 	/**
 	 * 將字串解析並格式化成某特定日期時間格式
@@ -115,7 +108,7 @@ public class LogUtil {
 	 * @param dateTimeString		字串（應為日期時間）
 	 * @param validFormats			可接受哪些日期時間格式
 	 * @param outputFormat			希望輸出的日期時間格式
-	 * @return						格式化結果
+	 * @return						剖析結果
 	 */
 	public static String parseDateTime(String dateTimeString, String[] validFormats, String outputFormat) {
 		for (int i = 0; i < validFormats.length; i++) {
@@ -131,6 +124,73 @@ public class LogUtil {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * 檢查日期時間字串是否為「Local Date Time」格式（yyyy-MM-dd HH:mm:ss.SSS）？
+	 *
+	 * @param localDateTimeString	要檢查的日期時間字串
+	 * @return						剖析結果
+	 */
+	public static Boolean isLocalDateTimeFormat(String dateTimeString) {
+		if (isNullOrEmpty(dateTimeString)) {
+			return false;
+		}
+		try {
+			DateTime dt = LOCAL_DATETIMEFORMATTER.parseDateTime(dateTimeString);
+			if (dt != null) {
+				return true;
+			}
+		} catch (UnsupportedOperationException | IllegalArgumentException e) {
+		}
+		return false;
+	}
+
+	/**
+	 * 檢查日期時間字串是否為「ISO8601 Date Time」格式（yyyy-MM-dd'T'HH:mm:ss.SSSZZ）？
+	 *
+	 * @param localDateTimeString	要檢查的日期時間字串
+	 * @return						剖析結果
+	 */
+	public static Boolean isISO8601Format(String dateTimeString) {
+		if (isNullOrEmpty(dateTimeString)) {
+			return false;
+		}
+		try {
+			DateTime dt = ISO8601_DATETIMEFORMATTER.parseDateTime(dateTimeString);
+			if (dt != null) {
+				return true;
+			}
+		} catch (UnsupportedOperationException | IllegalArgumentException e) {
+		}
+		return false;
+	}
+
+	/**
+	 * 將字串轉換成 ISO8601 格式的字串（使用 Joda Time）
+	 *
+	 * @return
+	 */
+	public static String toISO8601String(String dateTimeString) {
+		if (isISO8601Format(dateTimeString)) {
+			return dateTimeString;
+		}
+		if (isLocalDateTimeFormat(dateTimeString)) {
+			return localDateTimeToISO8601String(dateTimeString);
+		}
+		return null;
+	}
+
+	/**
+	 * 將 Local Date Time 字串轉換為 ISO8601 格式的字串（使用 Joda Time）
+	 *
+	 * @param str					要轉換的字串
+	 * @param dateTimeFormatter		日期時間格式轉換器
+	 * @return						轉換結果字串
+	 */
+	public static String localDateTimeToISO8601String(String localDateTimeString) {
+		DateTime dt = LOCAL_DATETIMEFORMATTER.parseDateTime(localDateTimeString);
+		return dt.toString(ISO8601_DATETIMEFORMATTER);
 	}
 
 	/**
