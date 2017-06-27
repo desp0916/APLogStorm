@@ -45,9 +45,7 @@ import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pic.ala.model.ApLog;
 import com.pic.ala.storm.translator.ApLogRecordTranslator;
 
 public class ESIndexBoltForApLog extends BaseRichBolt {
@@ -160,18 +158,19 @@ public class ESIndexBoltForApLog extends BaseRichBolt {
 		String apID = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_AP_ID);
 		String at = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_AT);
 		String msg = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_MSG);
-//		String esSource = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_ES_SOURCE);
-		ApLog apLog  = (ApLog) tuple.getValueByField(ApLogRecordTranslator.FIELD_APLOG);
-		String toBeIndexed = null;
+		String toBeIndexed = (String) tuple.getValueByField(ApLogRecordTranslator.FIELD_ES_SOURCE);
+		// 如果使用 ApLog 就會收不到 Logstash 所產生的 @timestamp、host、path ...等欄位
+//		String toBeIndexed = null;
+//		ApLog apLog  = (ApLog) tuple.getValueByField(ApLogRecordTranslator.FIELD_APLOG);
 
-		try {
-			toBeIndexed = objectMapper.writeValueAsString(apLog);
-		} catch (JsonProcessingException e1) {
-//			e1.printStackTrace();
-			LOG.error("Failed to transform ApLog to string: {}", apLog);
-			collector.ack(tuple);
-			return;
-		}
+//		try {
+//			toBeIndexed = objectMapper.writeValueAsString(apLog);
+//		} catch (JsonProcessingException e1) {
+////			e1.printStackTrace();
+//			LOG.error("Failed to transform ApLog to string: {}", apLog);
+//			collector.ack(tuple);
+//			return;
+//		}
 
 		if (!isDateValid(logDate, ApLogRecordTranslator.FORMAT_DATE)) {
 			LOG.error("The format of logDate is null or invalid: {}", logDate);

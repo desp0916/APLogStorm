@@ -2,7 +2,6 @@ package com.pic.ala.storm.translator;
 
 import static com.pic.ala.util.LogUtil.isNullOrEmpty;
 import static com.pic.ala.util.LogUtil.parseDateTime;
-import static com.pic.ala.util.LogUtil.toISO8601String;
 
 import java.io.IOException;
 import java.util.List;
@@ -86,7 +85,7 @@ public class ApLogRecordTranslator<K, V> implements RecordTranslator<K, V> {
 			if (!isNullOrEmpty(tmpLogDate)) {
 				logDate = tmpLogDate;
 				// 將 logTime 欄位強制轉為 ISO8601 格式的字串（yyyy-MM-dd'T'HH:mm:ss.SSSZZ）
-				apLog.setLogTime(toISO8601String(logTime));
+				// apLog.setLogTime(toISO8601String(logTime));
 			}
 
 		} catch (JsonParseException e) {
@@ -100,12 +99,13 @@ public class ApLogRecordTranslator<K, V> implements RecordTranslator<K, V> {
 			e.printStackTrace();
 		}
 
-		return new Values(apLog, sysID, logType, logDate, apID, at, msg);
+//		return new Values(apLog, sysID, logType, logDate, apID, at, msg);
+		return new Values(esSource, sysID, logType, logDate, apID, at, msg);
 	}
 
 	@Override
 	public Fields getFieldsFor(String stream) {
-		return new Fields(FIELD_APLOG, FIELD_SYS_ID, FIELD_LOG_TYPE,
+		return new Fields(FIELD_ES_SOURCE, FIELD_SYS_ID, FIELD_LOG_TYPE,
 				FIELD_LOG_DATE, FIELD_AP_ID, FIELD_AT, FIELD_MSG);
 	}
 
