@@ -7,6 +7,7 @@ package com.pic.ala.model;
 import static com.pic.ala.util.LogUtil.getISO8601Time;
 
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  * @since  2017年5月22日 下午3:00:56
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ApLog {
+public class ApLog implements Serializable {
 
 	public static final List<String> SYSTEMS;
 	public static List<String> LOG_TYPES;
