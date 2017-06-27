@@ -120,7 +120,7 @@ public class LogUtil {
 				if (temp != null) {
 					return df.format(temp);
 				}
-			} catch (ParseException e) {
+			} catch (Exception e) {
 			}
 		}
 		return null;
@@ -141,7 +141,7 @@ public class LogUtil {
 			if (dt != null) {
 				return true;
 			}
-		} catch (UnsupportedOperationException | IllegalArgumentException e) {
+		} catch (Exception e) {
 		}
 		return false;
 	}
@@ -161,7 +161,7 @@ public class LogUtil {
 			if (dt != null) {
 				return true;
 			}
-		} catch (UnsupportedOperationException | IllegalArgumentException e) {
+		} catch (Exception e) {
 		}
 		return false;
 	}
