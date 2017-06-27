@@ -2,12 +2,13 @@ package com.pic.ala.storm;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Properties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class LogBaseTopology {
+public abstract class LogBaseTopology implements Serializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogBaseTopology.class);
 
